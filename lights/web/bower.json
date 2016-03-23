@@ -1,0 +1,9 @@
+{
+  "name": "monty-leddington",
+  "version": "0.0.0",
+  "homepage": "https://github.com/thegecko/monty-leddington",
+  "license": "MIT",
+  "dependencies": {
+    "color-picker-element": "~0.0.4"
+  }
+}

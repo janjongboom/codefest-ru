@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>LED Control 2000</title>
+    <link rel="import" href="bower_components/color-picker-element/dist/color-picker.html">
+    <style>
+        html, body {
+            width: 100%;
+            padding: 0;
+            margin: 0;
+        }
+        button { font-size: calc(100vw / 5); display: block; margin: 20px auto; padding: 0 20px; }
+        color-picker { display: none; }
+    </style>
+</head>
+<body class="connection">
+    <button id="connect">Connect</button>
+    <div id="results"></div>
+
+    <script>
+        // this is needed by color-picker component unfortunately (does reflow)
+        var vw = window.innerWidth;
+        console.log(vw);
+        // so this thing reads its attributes when creating, not when adding to body
+        // that's a mess... dont feel like patching the library
+        document.body.innerHTML += '<color-picker width="' + vw + '" height="' + vw + '"></color-picker>';
+
+        var serviceUUID = "00007997-0000-1000-8000-00805f9b34fb";
+        var controlUUID = "0000a432-0000-1000-8000-00805f9b34fb";
+
+        var colorEl = document.querySelector('color-picker');
+        var connectEl = document.getElementById("connect");
+        var resultsEl = document.getElementById("results");
+
+        var lastLog = null
+        function log(message) {
+            console.log(message);
+            if (message != lastLog) {
+                resultsEl.innerText += message + "\n";
+                lastLog = message;
+            }
+        }
+
+        var ledChar = null;
+        connectEl.addEventListener('click', () => {
+            navigator.bluetooth.requestDevice({
+                filters: [{ services: [ 0x7997 ] }],
+                optionalServices: [serviceUUID]
+            })
+            .then(device => device.connectGATT())
+            .then(server => server.getPrimaryService(serviceUUID))
+            .then(service => service.getCharacteristic(controlUUID))
+            .then(characteristic => {
+                ledChar = characteristic;
+                colorEl.style.display = 'block';
+                connectEl.style.display = 'none';
+            })
+            .catch(error => {
+                log(error);
+            });
+        });
+
+        colorEl.addEventListener('colorselected', e => {
+            if (ledChar) {
+                var rgb = e.detail.rgb;
+                ledChar.writeValue(new Uint8Array([rgb.r, rgb.g, rgb.b, 100]))
+                .catch(error => {
+                    var se = error.toString();
+                    if (se.indexOf('operation already in progress') > -1) return;
+                    if (se.indexOf('no longer exists') > -1) {
+                        log('Disconnected...');
+                        colorEl.style.display = 'none';
+                        connectEl.style.display = 'block';
+                        return;
+                    }
+                    log(error);
+                });
+            }
+        });
+    </script>
+</body>
+</html>

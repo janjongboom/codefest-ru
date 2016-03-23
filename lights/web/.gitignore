@@ -1,0 +1,7 @@
+.DS_Store
+node_modules
+
+build
+yotta_modules
+yotta_targets
+.yotta.json
