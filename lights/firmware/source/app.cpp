@@ -4,13 +4,12 @@
 #include "ble/BLE.h"
 #include "eddystone/EddystoneService.h"
 #include "LightService.h"
+#include "ChainableLED/ChainableLED.h"         // Driver for the LED
 
 using namespace mbed::util;
 
 static DigitalOut statusLed(LED1);
-static PwmOut redLed(D0);
-static PwmOut greenLed(D1);
-static PwmOut blueLed(D2);
+static ChainableLED rgbLed(D6, D7, 1);   // Declare the LED (it's chainable!)
 
 static LightService* lightServicePtr;
 
@@ -39,15 +38,13 @@ void onDataWrittenCallback(const GattWriteCallbackParams *params) {
     if ((params->handle == lightServicePtr->getColorCharHandle())) {
         uint32_t colors;
         memcpy(&colors, params->data, 4);
-        
+
         uint8_t red = (colors >> 0) & 0xff;
         uint8_t green = (colors >> 8) & 0xff;
         uint8_t blue = (colors >> 16) & 0xff;
-        
-        redLed = static_cast<float>(red) / 255.0f;
-        greenLed = static_cast<float>(green) / 255.0f;
-        blueLed = static_cast<float>(blue) / 255.0f;
-        
+
+        rgbLed.setColorRGB(0, red, green, blue);
+
         printf("Wrote to lightServicePtr! %li\r\n", colors);
     }
 }
@@ -94,10 +91,8 @@ void bleInitComplete(BLE::InitializationCompleteCallbackContext *params)
 }
 
 void app_start(int, char**) {
-    redLed = 1.0f;
-    greenLed = 1.0f;
-    blueLed = 1.0f;
-    
+    rgbLed.setColorRGB(0, 0, 0xff, 0);
+
     // init the BLE stack
     BLE::Instance().init(bleInitComplete);
 }
